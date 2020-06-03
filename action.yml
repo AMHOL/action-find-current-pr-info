@@ -4,9 +4,6 @@ description: Find a PR associated with the current commit.
 inputs:
   github-token:
     description: The GitHub token used to create an authenticated client.
-  sha:
-    description: Sha to get PR for.  Defaults to current sha.
-    required: false
 outputs:
   pr:
     description: The PR if one was found. (e.g. '345' for #345) [Deprecated: Please use number instead]
@@ -16,6 +13,10 @@ outputs:
     description: The PR's title if the PR was found
   body:
     description: The PR's body if the PR was found
+  url:
+      description: The PR's url if the PR was found
+  branch_name:
+    description: The name of the branch as the ref of the PR
 runs:
   using: node12
   main: 'main.js'
