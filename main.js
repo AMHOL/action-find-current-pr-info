@@ -1,21 +1,12 @@
 const core = require('@actions/core');
 const { GitHub, context } = require('@actions/github');
 
-async function getDataFromPullRequestEvent(client) {
-    // const sha = context.payload.pull_request.head.sha
-    // const result = await client.repos.listPullRequestsAssociatedWithCommit({
-    //     owner: context.repo.owner,
-    //     repo: context.repo.repo,
-    //     commit_sha: sha ,
-    // });
-    // const pr = result.data.length > 0 && result.data[0];
-    console.log(JSON.stringify(context))
-
-    const number = context.payload.pull_request.number
-    const title = context.payload.pull_request.title
-    const body = context.payload.pull_request.body
-    const url = context.payload.pull_request.html_url
-    const branch_name = context.payload.pull_request.head.ref
+async function getDataFromPullRequestEvent(client, payload) {
+    const number = payload.pull_request.number
+    const title = payload.pull_request.title
+    const body = payload.pull_request.body
+    const url = payload.pull_request.html_url
+    const branch_name = payload.pull_request.head.ref
 
     return {
         number: number || '',
@@ -26,18 +17,15 @@ async function getDataFromPullRequestEvent(client) {
     }
 }
 
-async function getDataFromIssueCommentEvent(client) {
-
-    console.log(JSON.stringify(context))
-
-    const number = context.payload.issue.number
-    const title = context.payload.issue.title
-    const body = context.payload.issue.body
-    const url = context.payload.issue.html_url
+async function getDataFromIssueCommentEvent(client, payload, repo) {
+    const number = payload.issue.number
+    const title = payload.issue.title
+    const body = payload.issue.body
+    const url = payload.issue.html_url
 
     const pr = await client.pulls.get({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
+        owner: repo.owner,
+        repo: repo.repo,
         pull_number: number,
     });
 
@@ -53,25 +41,35 @@ async function getDataFromIssueCommentEvent(client) {
 }
 
 async function getData() {
-
     const token = core.getInput('github-token', { required: true });
     const client = new GitHub(token, {});
-
+    
     switch (context.eventName) {
         case 'pull_request':
-            return await getDataFromPullRequestEvent(client)
+            return await getDataFromPullRequestEvent(
+                client,
+                context.payload
+            )
         case 'issue_comment':
-            return await getDataFromIssueCommentEvent(client)
+            return await getDataFromIssueCommentEvent(
+                client,
+                context.payload,
+                context.repo
+            )
+        case 'repository_dispatch':
+            return await getDataFromIssueCommentEvent(
+                client,
+                context.payload.client_payload.github.payload,
+                context.repo
+            )
         default:
-            throw new Error('Event name not handled')
+            throw new Error(`Event "${context.eventName}" not handled`)
     }
 }
 
-async function main() {
-
+async function main() {    
     const data = await getData()
 
-    console.log(JSON.stringify(context))
     console.log(JSON.stringify(data))
 
     core.setOutput('pr', data.number || '');
